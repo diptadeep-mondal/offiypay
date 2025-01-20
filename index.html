@@ -1,13 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OfflyPay</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OfflyPay - Offline Payment System</title>
+    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-  <div id="root"></div>
+<body class="bg-gray-100 font-['Inter']">
+    <div id="app">
+        <!-- Auth Container -->
+        <div id="authContainer" class="min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                <h1 class="text-2xl font-bold text-center mb-6">Welcome to OfflyPay</h1>
+                <div class="flex gap-4 mb-6">
+                    <button onclick="showLogin()" class="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg">Login</button>
+                    <button onclick="showRegister()" class="flex-1 py-2 px-4 bg-gray-200 rounded-lg">Register</button>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <input type="tel" placeholder="Enter Mobile Number" class="w-full p-3 border rounded-lg" required>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg">Login</button>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" class="space-y-4 hidden">
+                    <div>
+                        <input type="text" placeholder="Bank IFSC Code (First 4 letters)" class="w-full p-3 border rounded-lg" required>
+                    </div>
+                    <div>
+                        <input type="tel" placeholder="Mobile Number" class="w-full p-3 border rounded-lg" required>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg">Register</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard Container -->
+        <div id="dashboardContainer" class="hidden min-h-screen bg-gray-100">
+            <!-- Header -->
+            <header class="bg-white shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                    <h1 class="text-xl font-bold">OfflyPay</h1>
+                    <div class="relative">
+                        <button onclick="toggleProfile()" class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <i class="bi bi-person-circle text-xl"></i>
+                        </button>
+                        <!-- Profile Dropdown -->
+                        <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4">
+                            <div class="mb-4">
+                                <p class="text-lg font-semibold">Welcome, User</p>
+                            </div>
+                            <div class="space-y-2">
+                                <button onclick="showBankAccounts()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded">Bank Accounts</button>
+                                <button onclick="showCheckBalance('profile')" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded">Check Balance</button>
+                                <button onclick="showResetPin()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded">Reset PIN</button>
+                                <button onclick="logout()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded text-red-600">Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="max-w-7xl mx-auto px-4 py-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="showSendMoney()" class="p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition">
+                        <i class="bi bi-send text-2xl mb-2 text-blue-600"></i>
+                        <p>Send Money</p>
+                    </button>
+                    <button onclick="showRequestMoney()" class="p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition">
+                        <i class="bi bi-currency-exchange text-2xl mb-2 text-green-600"></i>
+                        <p>Request Money</p>
+                    </button>
+                    <button onclick="showCheckBalance('dashboard')" class="p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition">
+                        <i class="bi bi-wallet2 text-2xl mb-2 text-purple-600"></i>
+                        <p>Check Balance</p>
+                    </button>
+                    <button onclick="showHistory()" class="p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition">
+                        <i class="bi bi-clock-history text-2xl mb-2 text-gray-600"></i>
+                        <p>History</p>
+                    </button>
+                </div>
+
+                <!-- Modal Container -->
+                <div id="modalContainer" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-lg max-w-md w-full p-6">
+                        <div id="modalContent"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Simulated data
+        const mockData = {
+            banks: ['HDFC Bank', 'SBI', 'ICICI Bank'],
+            transactions: [
+                { type: 'sent', amount: 1000, to: 'user@upi', date: '2023-12-01', id: 'TXN001' },
+                { type: 'received', amount: 500, from: 'friend@upi', date: '2023-12-02', id: 'TXN002' }
+            ]
+        };
+
+        // Auth functions
+        function showLogin() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+        }
+
+        // Dashboard functions
+        function toggleProfile() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function showModal(content) {
+            document.getElementById('modalContainer').classList.remove('hidden');
+            document.getElementById('modalContent').innerHTML = content;
+        }
+
+        function hideModal() {
+            document.getElementById('modalContainer').classList.add('hidden');
+        }
+
+        function showSendMoney() {
+            const content = `
+                <div class="space-y-4">
+                    <h2 class="text-xl font-bold mb-4">Send Money</h2>
+                    <div>
+                        <select class="w-full p-3 border rounded-lg">
+                            <option value="upi">UPI ID</option>
+                            <option value="mobile">Mobile Number</option>
+                            <option value="account">IFSC & Account Number</option>
+                        </select>
+                    </div>
+                    <input type="text" placeholder="Enter recipient details" class="w-full p-3 border rounded-lg">
+                    <input type="number" placeholder="Enter amount" class="w-full p-3 border rounded-lg">
+                    <input type="password" placeholder="Enter UPI PIN" class="w-full p-3 border rounded-lg">
+                    <button onclick="processPayment()" class="w-full py-3 bg-blue-600 text-white rounded-lg">Send</button>
+                    <button onclick="hideModal()" class="w-full py-3 bg-gray-200 rounded-lg mt-2">Cancel</button>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function showRequestMoney() {
+            const content = `
+                <div class="space-y-4">
+                    <h2 class="text-xl font-bold mb-4">Request Money</h2>
+                    <div>
+                        <select class="w-full p-3 border rounded-lg">
+                            <option value="upi">UPI ID</option>
+                            <option value="mobile">Phone Number</option>
+                        </select>
+                    </div>
+                    <input type="text" placeholder="Enter details" class="w-full p-3 border rounded-lg">
+                    <input type="number" placeholder="Enter amount" class="w-full p-3 border rounded-lg">
+                    <button onclick="processRequest()" class="w-full py-3 bg-blue-600 text-white rounded-lg">Request</button>
+                    <button onclick="hideModal()" class="w-full py-3 bg-gray-200 rounded-lg mt-2">Cancel</button>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function showCheckBalance(source) {
+            const content = `
+                <div class="space-y-4">
+                    <h2 class="text-xl font-bold mb-4">Select Bank</h2>
+                    <div class="space-y-2">
+                        ${mockData.banks.map(bank => `
+                            <button onclick="checkBalance('${bank}')" class="w-full p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg">
+                                ${bank}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <button onclick="hideModal()" class="w-full py-3 bg-gray-200 rounded-lg mt-2">Cancel</button>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        function showHistory() {
+            const content = `
+                <div class="space-y-4">
+                    <h2 class="text-xl font-bold mb-4">Transaction History</h2>
+                    <div class="space-y-2">
+                        ${mockData.transactions.map(tx => `
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="flex justify-between">
+                                    <span class="font-semibold">${tx.type === 'sent' ? 'Sent to: ' + tx.to : 'Received from: ' + tx.from}</span>
+                                    <span class="${tx.type === 'sent' ? 'text-red-600' : 'text-green-600'}">
+                                        ${tx.type === 'sent' ? '-' : '+'}₹${tx.amount}
+                                    </span>
+                                </div>
+                                <div class="text-sm text-gray-500">${tx.date} | ID: ${tx.id}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button onclick="hideModal()" class="w-full py-3 bg-gray-200 rounded-lg mt-2">Close</button>
+                </div>
+            `;
+            showModal(content);
+        }
+
+        // Init
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('dashboardContainer').classList.remove('hidden');
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('dashboardContainer').classList.remove('hidden');
+        });
+
+        function logout() {
+            document.getElementById('authContainer').classList.remove('hidden');
+            document.getElementById('dashboardContainer').classList.add('hidden');
+            document.getElementById('profileDropdown').classList.add('hidden');
+        }
+
+        // Payment processing functions
+        function processPayment() {
+            showModal(`
+                <div class="text-center space-y-4">
+                    <i class="bi bi-check-circle-fill text-5xl text-green-600"></i>
+                    <h2 class="text-xl font-bold">Payment Successful!</h2>
+                    <p class="text-gray-600">Transaction ID: TXN${Math.random().toString(36).substr(2, 9)}</p>
+                    <button onclick="hideModal()" class="w-full py-3 bg-blue-600 text-white rounded-lg">Done</button>
+                </div>
+            `);
+        }
+
+        function processRequest() {
+            showModal(`
+                <div class="text-center space-y-4">
+                    <i class="bi bi-check-circle-fill text-5xl text-green-600"></i>
+                    <h2 class="text-xl font-bold">Request Sent Successfully!</h2>
+                    <button onclick="hideModal()" class="w-full py-3 bg-blue-600 text-white rounded-lg">Done</button>
+                </div>
+            `);
+        }
+
+        function checkBalance(bank) {
+            showModal(`
+                <div class="space-y-4">
+                    <h2 class="text-xl font-bold mb-4">Enter PIN for ${bank}</h2>
+                    <input type="password" placeholder="Enter UPI PIN" class="w-full p-3 border rounded-lg">
+                    <button onclick="showBalanceAmount('${bank}')" class="w-full py-3 bg-blue-600 text-white rounded-lg">Submit</button>
+                    <button onclick="hideModal()" class="w-full py-3 bg-gray-200 rounded-lg">Cancel</button>
+                </div>
+            `);
+        }
+
+        function showBalanceAmount(bank) {
+            showModal(`
+                <div class="text-center space-y-4">
+                    <h2 class="text-xl font-bold">Current Balance</h2>
+                    <p class="text-3xl font-bold text-green-600">₹${Math.floor(Math.random() * 100000)}</p>
+                    <p class="text-gray-600">${bank}</p>
+                    <button onclick="hideModal()" class="w-full py-3 bg-blue-600 text-white rounded-lg">Close</button>
+                </div>
+            `);
+        }
+    </script>
 </body>
 </html>
